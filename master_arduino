@@ -1,0 +1,36 @@
+//내가 짠 마스터
+#include <SPI.h>
+
+int B = 8;
+int R = A0;
+int val_R;
+
+void setup() {
+  Serial.begin(9600);
+  SPI.begin();
+  pinMode(B, OUTPUT);
+  pinMode(R, INPUT);
+  SPI.setClockDivider(SPI_CLOCK_DIV8);
+  digitalWrite(SS, HIGH);
+}
+
+void loop() {
+  byte m_send, m_receive;
+  val_R = analogRead(R) / 4;
+  digitalWrite(SS, LOW);
+  m_send = val_R;
+  m_receive = SPI.transfer(m_send);
+  
+  if(m_receive==0){
+    tone(B, 500);
+    delay(100);
+    noTone(B);
+    delay(100);
+    Serial.println(m_receive);
+  }
+  else {
+    digitalWrite(B, LOW);
+    Serial.println("B off");
+  }
+  delay(500);
+}
