@@ -1,0 +1,51 @@
+///////////////////////////////////////////////
+//                  master                   //
+///////////////////////////////////////////////
+#define SS 10 // 슬레이브 선택 핀
+#define MOSI 11
+#define MISO 12
+#define SCK 13
+
+int B = 8; // 부저 핀
+int R = A0; // 가변 저항 핀
+
+void setup() {
+  Serial.begin(9600);
+  
+  DDRB |= (1 << PB2) | (1 << PB3) | (1 << PB5); //#define C=SS PB2, MOSI PB3, SCK PB5
+  DDRB &= ~(1 << PB4);
+  DDRD |= (1 << PD0);
+  ADCSRA |= (1 << ADEN);
+  PORTB |= (1 << PB2);
+  SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR0);
+}
+
+void loop() {
+  byte m_send, m_receive;
+  
+  int val_R = analogRead(R) / 4;
+  m_send = val_R;
+  
+  PORTB &= ~(1 << PB2);
+  
+  SPDR = m_send;
+  
+  while (!(SPSR & (1 << SPIF)));
+  
+  m_receive = SPDR;
+  
+  if (m_receive == 0) {
+    tone(B, 500);
+    delay(100);
+    noTone(B);
+    delay(100);
+    Serial.println(m_receive);
+  } else {
+    PORTD &= ~(1 << PD0);
+    Serial.println("B off");
+  }
+  
+  PORTB |= (1 << PB2);
+  
+  delay(500);
+}
