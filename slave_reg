@@ -1,0 +1,73 @@
+///////////////////////////////////////////////
+//                  slave                    //
+///////////////////////////////////////////////
+
+#define LED 9 // LED 핀
+#define BT 7  // 버튼 핀
+
+volatile byte s_send, s_receive;
+unsigned long B_starttime = 0;
+bool B = false;
+bool state_last = HIGH;
+unsigned long T_debounce = 0;
+const unsigned long Delay_debounce = 50;
+const unsigned long Delay_long = 1000;
+
+bool isOn = false;
+
+void setup() {
+  Serial.begin(9600);
+  
+  DDRB |= 0x02;
+  DDRD &= 0x7F;
+  PORTD |= 0x80;
+  DDRB |= 0x10;
+  TCCR1A = (1 << COM1A1) | (1 << WGM10);
+  TCCR1B = (1 << CS11);
+  SPCR = (1 << SPE);
+  SPCR |= (1 << SPIE);
+}
+
+ISR(SPI_STC_vect) {
+  s_receive = SPDR;
+  
+  Serial.println("catch");
+  
+  if (s_receive) {
+    OCR1A = s_receive;
+    Serial.println(s_receive);
+  }
+
+  int reading = digitalRead(BT); //can't..
+
+  if (reading != state_last) {
+    T_debounce = millis();
+    if (reading == LOW) {
+      B_starttime = millis();
+      B = true;
+    } else {
+      B = false;
+    }
+  }
+
+  if ((millis() - T_debounce) > Delay_debounce) {
+    if (B) {
+      if (millis() - B_starttime >= Delay_long) {
+        isOn = false;
+        Serial.println("State: OFF");
+      }
+    } else {
+      if (!B && (millis() - B_starttime < Delay_long) && (millis() - T_debounce) > Delay_debounce) {
+        isOn = true;
+        Serial.println("State: ON");
+      }
+    }
+  }
+
+  state_last = reading;
+  s_send = isOn ? 0 : 1;
+  SPDR = s_send;
+}
+
+void loop() {
+}
