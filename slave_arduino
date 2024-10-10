@@ -1,0 +1,68 @@
+//내가 짠 슬레이브
+#include <SPI.h>
+
+int LED = 9;
+int BT = 7;
+
+volatile byte s_send, s_receive;
+unsigned long B_starttime = 0;
+bool B = false;
+bool state_last = HIGH;
+unsigned long T_debounce = 0;
+unsigned long delay_debounce = 50;
+const unsigned long Delay_long = 1000;
+
+bool isOn = false;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(LED, OUTPUT);
+  pinMode(BT, INPUT_PULLUP);
+  pinMode(MISO, OUTPUT);
+  SPCR |= _BV(SPE);
+  SPCR &= ~_BV(MSTR);
+  SPCR |= _BV(SPIE);
+}
+
+ISR(SPI_STC_vect) {
+  s_receive = SPDR;
+  Serial.println("catch");
+
+  if (s_receive) {
+    analogWrite(LED, s_receive);
+    Serial.println(s_receive);
+  }
+
+  int reading = digitalRead(BT);
+
+  if (reading != state_last) {
+    T_debounce = millis();
+    if (reading == LOW) {
+      B_starttime = millis();
+      B = true;
+    } else {
+      B = false;
+    }
+  }
+
+  if ((millis() - T_debounce) > delay_debounce) {
+    if (B) {
+      if (millis() - B_starttime >= Delay_long) {
+        isOn = false;
+        Serial.println("State: OFF");
+      }
+    } else {
+      if (!B && (millis() - B_starttime < Delay_long) && (millis() - T_debounce) > delay_debounce) {
+        isOn = true;
+        Serial.println("State: ON");
+      }
+    }
+  }
+
+  state_last = reading;
+  s_send = isOn ? 0 : 1;
+  SPDR = s_send;
+}
+
+void loop() {
+}
